@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn Center | COFRÉ Education Group</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary-dark: #1e3a5f;
+            --primary-blue: #2b7fbf;
+            --accent-green: #4db8a8;
+            --linkedin: #0a66c2;
+            --text-dark: #2c3e50;
+            --text-light: #6c757d;
+            --bg-light: #f8f9fa;
+            --border-color: #e9ecef;
+            --ok: #1b5e20;
+            --warn: #8a6d00;
+            --err: #b71c1c;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6; color: var(--text-dark); background: var(--bg-light); min-height: 100vh;
+        }
+        #app { display: none; }
+        .loading {
+            position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+            background: var(--bg-light); color: var(--text-light);
+        }
+        header {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-blue) 100%);
+            color: white; padding: 1rem 2rem; box-shadow: 0 2px 10px rgba(0,0,0,.1);
+        }
+        .header-container { max-width: 1100px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+        .header-left { display: flex; align-items: center; gap: .8rem; }
+        .header-left img { height: 38px; background: white; padding: 3px; border-radius: 4px; }
+        .header-left span { font-weight: bold; letter-spacing: .5px; }
+        .header-right { display: flex; gap: .8rem; align-items: center; font-size: .9rem; }
+        .btn {
+            border: none; border-radius: 6px; padding: .6rem 1.1rem; cursor: pointer; font-size: .92rem;
+            font-weight: 600; transition: transform .15s ease, box-shadow .15s ease, background .2s ease;
+        }
+        .btn:hover:not(:disabled) { transform: translateY(-1px); }
+        .btn:disabled { opacity: .55; cursor: not-allowed; }
+        .btn-primary { background: var(--primary-blue); color: white; }
+        .btn-linkedin { background: var(--linkedin); color: white; }
+        .btn-green { background: var(--accent-green); color: white; }
+        .btn-ghost { background: rgba(255,255,255,.15); color: white; border: 1px solid rgba(255,255,255,.4); }
+        .btn-danger { background: #fff; color: var(--err); border: 1px solid #f5c6cb; }
+        main { max-width: 1100px; margin: 0 auto; padding: 2rem; display: grid; gap: 1.5rem; }
+        .card {
+            background: white; border: 1px solid var(--border-color); border-radius: 12px;
+            padding: 1.5rem; box-shadow: 0 4px 14px rgba(0,0,0,.04);
+        }
+        .card h2 { font-size: 1.2rem; color: var(--primary-dark); margin-bottom: 1rem; display: flex; align-items: center; gap: .5rem; }
+        .row { display: flex; gap: .8rem; flex-wrap: wrap; align-items: center; }
+        .pill { display: inline-flex; align-items: center; gap: .4rem; padding: .35rem .8rem; border-radius: 20px; font-size: .85rem; font-weight: 600; }
+        .pill.ok { background: #e6f4ea; color: var(--ok); }
+        .pill.warn { background: #fff7e0; color: var(--warn); }
+        .pill.err { background: #fdecea; color: var(--err); }
+        .pill.muted { background: #eef1f4; color: var(--text-light); }
+        label { font-weight: 600; font-size: .88rem; display: block; margin-bottom: .35rem; }
+        textarea, select, input[type="datetime-local"] {
+            width: 100%; padding: .7rem; border: 1px solid var(--border-color); border-radius: 6px;
+            font-family: inherit; font-size: .95rem;
+        }
+        textarea { min-height: 120px; resize: vertical; }
+        textarea:focus, select:focus, input:focus { outline: none; border-color: var(--primary-blue); box-shadow: 0 0 0 3px rgba(77,184,168,.2); }
+        .field { margin-bottom: 1rem; }
+        .hint { font-size: .82rem; color: var(--text-light); margin-top: .3rem; }
+        .msg { padding: .7rem .9rem; border-radius: 6px; font-size: .9rem; margin-top: .8rem; display: none; }
+        .msg.show { display: block; }
+        .msg.ok { background: #e6f4ea; color: var(--ok); }
+        .msg.err { background: #fdecea; color: var(--err); }
+        table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+        th, td { text-align: left; padding: .6rem; border-bottom: 1px solid var(--border-color); }
+        th { color: var(--text-light); font-weight: 600; }
+        .idea { border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; margin-bottom: .8rem; }
+        .idea h3 { font-size: 1rem; color: var(--primary-dark); margin-bottom: .3rem; }
+        .idea .tags { font-size: .78rem; color: var(--text-light); margin: .4rem 0; }
+        .idea .draft { background: var(--bg-light); border-radius: 6px; padding: .6rem; font-size: .88rem; white-space: pre-wrap; }
+        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(0,0,0,.15); border-top-color: var(--primary-blue); border-radius: 50%; animation: spin .8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        a.back { color: white; text-decoration: none; font-size: .85rem; opacity: .85; }
+        a.back:hover { opacity: 1; }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">Verificando acceso…</div>
+
+    <div id="app">
+        <header>
+            <div class="header-container">
+                <div class="header-left">
+                    <img src="Logo.png" alt="COFRÉ Education Group">
+                    <span>LinkedIn Center</span>
+                </div>
+                <div class="header-right">
+                    <a class="back" href="panel.html">← Panel</a>
+                    <span id="user-info"></span>
+                    <button class="btn btn-ghost" id="logout-btn">Cerrar sesión</button>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <!-- ESTADO DE CONEXIÓN -->
+            <section class="card">
+                <h2>🔗 Estado de conexión</h2>
+                <div class="row">
+                    <span id="conn-pill" class="pill muted">Cargando…</span>
+                    <span id="conn-name" class="hint"></span>
+                </div>
+                <div class="row" style="margin-top: 1rem;">
+                    <button class="btn btn-linkedin" id="btn-connect">Conectar LinkedIn</button>
+                    <button class="btn btn-primary" id="btn-connect-org">Conectar con permisos de página</button>
+                    <button class="btn btn-danger" id="btn-disconnect" style="display:none;">Desconectar</button>
+                </div>
+                <div id="conn-msg" class="msg"></div>
+            </section>
+
+            <!-- EDITOR DE PUBLICACIÓN -->
+            <section class="card">
+                <h2>✍️ Crear publicación</h2>
+                <div class="field">
+                    <label for="post-target">Destino</label>
+                    <select id="post-target">
+                        <option value="person">Perfil personal</option>
+                        <option value="organization">Página de empresa</option>
+                    </select>
+                    <div class="hint" id="org-hint"></div>
+                </div>
+                <div class="field" id="org-select-wrap" style="display:none;">
+                    <label for="post-org">Página</label>
+                    <select id="post-org"><option value="">—</option></select>
+                </div>
+                <div class="field">
+                    <label for="post-text">Texto del post</label>
+                    <textarea id="post-text" placeholder="Escribe tu publicación…"></textarea>
+                </div>
+                <div class="row">
+                    <button class="btn btn-primary" id="btn-draft">Guardar borrador</button>
+                    <button class="btn btn-green" id="btn-publish">Publicar ahora</button>
+                </div>
+                <div class="field" style="margin-top: 1.2rem;">
+                    <label for="post-when">Programar para</label>
+                    <div class="row">
+                        <input type="datetime-local" id="post-when" style="max-width: 260px;">
+                        <button class="btn btn-primary" id="btn-schedule">Programar</button>
+                    </div>
+                </div>
+                <div id="post-msg" class="msg"></div>
+            </section>
+
+            <!-- ANALÍTICAS -->
+            <section class="card">
+                <h2>📊 Analíticas</h2>
+                <div class="hint">Las analíticas de páginas de empresa requieren permisos aprobados. Las del perfil personal no están disponibles vía API de LinkedIn.</div>
+                <div class="row" style="margin: 1rem 0;">
+                    <select id="analytics-org" style="max-width: 320px;"><option value="">Selecciona una página…</option></select>
+                    <button class="btn btn-primary" id="btn-analytics">Ver analíticas</button>
+                </div>
+                <div id="analytics-state"></div>
+                <div style="overflow-x:auto;">
+                    <table id="analytics-table" style="display:none;">
+                        <thead><tr><th>Impresiones</th><th>Clics</th><th>Reacciones</th><th>Comentarios</th><th>Compartidos</th><th>Interacción</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- IDEAS IA -->
+            <section class="card">
+                <h2>💡 Ideas de contenido para COFRÉ Education Group</h2>
+                <div class="row">
+                    <button class="btn btn-primary" id="btn-ideas">Generar ideas</button>
+                    <span id="ideas-source" class="hint"></span>
+                </div>
+                <div id="ideas-list" style="margin-top: 1rem;"></div>
+            </section>
+        </main>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence }
+            from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFunctions, httpsCallable }
+            from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
+
+        // Misma configuración del proyecto (públicos a propósito; no son secretos)
+        const firebaseConfig = {
+            apiKey: "AIzaSyARY-i1JB3lh6Ux1tJdaIkBmLAXpngVom0",
+            authDomain: "cofre-education-group.firebaseapp.com",
+            projectId: "cofre-education-group",
+            storageBucket: "cofre-education-group.firebasestorage.app",
+            messagingSenderId: "352407565108",
+            appId: "1:352407565108:web:bb955c37dc5c3d0ead2b61",
+            measurementId: "G-PWNZEG8T24"
+        };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const functions = getFunctions(app, "us-central1");
+        const call = (name) => httpsCallable(functions, name);
+
+        // Mensajes amigables por código de error de negocio
+        const ERR_MSG = {
+            CONFIG_MISSING: "El módulo aún no está configurado en el servidor.",
+            AUTH_REQUIRED: "Debes iniciar sesión.",
+            LINKEDIN_AUTH_FAILED: "LinkedIn rechazó la conexión. Vuelve a conectar.",
+            PERMISSION_REQUIRED: "Para publicar o analizar páginas de empresa, tu app de LinkedIn debe tener permisos aprobados.",
+            UNSUPPORTED_ANALYTICS: "Esta analítica no está disponible a través de la API de LinkedIn.",
+            INSUFFICIENT_DATA: "Faltan datos para completar la operación.",
+            TOKEN_EXPIRED: "Tu conexión con LinkedIn expiró. Vuelve a conectar.",
+            NOT_CONNECTED: "No tienes LinkedIn conectado.",
+            UNKNOWN_ERROR: "Ocurrió un error inesperado. Inténtalo nuevamente."
+        };
+        function codeOf(e) {
+            return (e && e.details && e.details.code) || "UNKNOWN_ERROR";
+        }
+        function msgOf(e) {
+            const c = codeOf(e);
+            return ERR_MSG[c] || ERR_MSG.UNKNOWN_ERROR;
+        }
+        function showMsg(el, text, ok) {
+            el.textContent = text;
+            el.className = "msg show " + (ok ? "ok" : "err");
+        }
+        function clearMsg(el) { el.className = "msg"; }
+
+        // ---- Guardián de sesión ----
+        const loadingEl = document.getElementById("loading");
+        const appEl = document.getElementById("app");
+        let currentUser = null;
+
+        setPersistence(auth, browserLocalPersistence).then(() => {
+            onAuthStateChanged(auth, (user) => {
+                if (!user) { window.location.replace("login.html"); return; }
+                currentUser = user;
+                document.getElementById("user-info").textContent = user.email;
+                loadingEl.style.display = "none";
+                appEl.style.display = "block";
+                init();
+            });
+        });
+
+        document.getElementById("logout-btn").addEventListener("click", async () => {
+            await signOut(auth); window.location.replace("login.html");
+        });
+
+        // ---- Estado UI ----
+        const connPill = document.getElementById("conn-pill");
+        const connName = document.getElementById("conn-name");
+        const connMsg = document.getElementById("conn-msg");
+        const btnDisconnect = document.getElementById("btn-disconnect");
+        let connectionStatus = "disconnected";
+
+        function renderConnection(status, profile) {
+            connectionStatus = status;
+            const map = {
+                active: ["ok", "✅ Conectado"],
+                disconnected: ["muted", "⚪ No conectado"],
+                expired: ["warn", "⚠️ Token expirado"],
+                permission_required: ["warn", "⚠️ Permiso requerido"],
+                failed: ["err", "❌ Error de conexión"]
+            };
+            const [cls, label] = map[status] || map.disconnected;
+            connPill.className = "pill " + cls;
+            connPill.textContent = label;
+            connName.textContent = profile && profile.name ? `(${profile.name})` : "";
+            btnDisconnect.style.display = status === "disconnected" ? "none" : "inline-block";
+        }
+
+        async function refreshProfile() {
+            try {
+                const res = await call("linkedinGetProfile")();
+                renderConnection(res.data.status, res.data.profile);
+                if (res.data.status === "active") { loadOrganizations(); }
+            } catch (e) {
+                renderConnection("failed");
+                showMsg(connMsg, msgOf(e), false);
+            }
+        }
+
+        // ---- Conectar / Desconectar ----
+        async function connect(includeOrg) {
+            clearMsg(connMsg);
+            try {
+                const res = await call("linkedinStartAuth")({ includeOrg });
+                window.location.href = res.data.authUrl; // redirige a LinkedIn
+            } catch (e) {
+                showMsg(connMsg, msgOf(e), false);
+            }
+        }
+        document.getElementById("btn-connect").addEventListener("click", () => connect(false));
+        document.getElementById("btn-connect-org").addEventListener("click", () => connect(true));
+        btnDisconnect.addEventListener("click", async () => {
+            if (!confirm("¿Desconectar tu cuenta de LinkedIn?")) return;
+            try { await call("linkedinDisconnect")(); renderConnection("disconnected"); showMsg(connMsg, "LinkedIn desconectado.", true); }
+            catch (e) { showMsg(connMsg, msgOf(e), false); }
+        });
+
+        // ---- Organizaciones / destino ----
+        const targetSel = document.getElementById("post-target");
+        const orgWrap = document.getElementById("org-select-wrap");
+        const orgSel = document.getElementById("post-org");
+        const analyticsOrg = document.getElementById("analytics-org");
+        const orgHint = document.getElementById("org-hint");
+
+        targetSel.addEventListener("change", () => {
+            orgWrap.style.display = targetSel.value === "organization" ? "block" : "none";
+        });
+
+        async function loadOrganizations() {
+            try {
+                const res = await call("linkedinGetOrganizations")();
+                const orgs = res.data.organizations || [];
+                orgSel.innerHTML = '<option value="">—</option>';
+                analyticsOrg.innerHTML = '<option value="">Selecciona una página…</option>';
+                orgs.forEach((o) => {
+                    orgSel.insertAdjacentHTML("beforeend", `<option value="${o.id}">${o.name}</option>`);
+                    analyticsOrg.insertAdjacentHTML("beforeend", `<option value="${o.id}">${o.name}</option>`);
+                });
+                orgHint.textContent = orgs.length ? "" : "No se detectaron páginas administrables.";
+            } catch (e) {
+                if (codeOf(e) === "PERMISSION_REQUIRED") {
+                    orgHint.textContent = "Para publicar o analizar páginas de empresa, tu app de LinkedIn debe tener permisos aprobados.";
+                } else {
+                    orgHint.textContent = msgOf(e);
+                }
+            }
+        }
+
+        // ---- Crear post (borrador / publicar / programar) ----
+        const postText = document.getElementById("post-text");
+        const postMsg = document.getElementById("post-msg");
+
+        function postPayload() {
+            const target = targetSel.value;
+            return {
+                text: postText.value.trim(),
+                target,
+                organizationId: target === "organization" ? orgSel.value || null : null
+            };
+        }
+        function validatePost(p) {
+            if (!p.text) { showMsg(postMsg, "El post no puede estar vacío.", false); return false; }
+            if (connectionStatus !== "active") { showMsg(postMsg, "Conecta LinkedIn antes de publicar.", false); return false; }
+            if (p.target === "organization" && !p.organizationId) { showMsg(postMsg, "Selecciona una página de empresa.", false); return false; }
+            return true;
+        }
+
+        document.getElementById("btn-draft").addEventListener("click", async () => {
+            const p = postPayload();
+            if (!p.text) { showMsg(postMsg, "El post no puede estar vacío.", false); return; }
+            try { await call("linkedinCreatePost")({ ...p, action: "draft" }); showMsg(postMsg, "Borrador guardado.", true); }
+            catch (e) { showMsg(postMsg, msgOf(e), false); }
+        });
+
+        document.getElementById("btn-publish").addEventListener("click", async () => {
+            const p = postPayload();
+            if (!validatePost(p)) return;
+            if (!confirm("¿Publicar ahora en LinkedIn? Esta acción es pública e inmediata.")) return;
+            try {
+                await call("linkedinCreatePost")({ ...p, action: "publish", confirm: true });
+                showMsg(postMsg, "✅ Publicado en LinkedIn.", true); postText.value = "";
+            } catch (e) { showMsg(postMsg, msgOf(e), false); }
+        });
+
+        document.getElementById("btn-schedule").addEventListener("click", async () => {
+            const p = postPayload();
+            if (!validatePost(p)) return;
+            const when = document.getElementById("post-when").value;
+            if (!when) { showMsg(postMsg, "Elige una fecha y hora.", false); return; }
+            try {
+                await call("linkedinSchedulePost")({ ...p, scheduledAt: new Date(when).toISOString() });
+                showMsg(postMsg, "🕒 Publicación programada.", true);
+            } catch (e) { showMsg(postMsg, msgOf(e), false); }
+        });
+
+        // ---- Analíticas ----
+        const analyticsState = document.getElementById("analytics-state");
+        const analyticsTable = document.getElementById("analytics-table");
+        document.getElementById("btn-analytics").addEventListener("click", async () => {
+            analyticsTable.style.display = "none";
+            const orgId = analyticsOrg.value;
+            analyticsState.innerHTML = '<span class="spinner"></span> Cargando…';
+            try {
+                const res = await call("linkedinGetAnalytics")({ organizationId: orgId || null });
+                const rows = res.data.rows || [];
+                if (!rows.length) { analyticsState.innerHTML = '<span class="pill muted">Sin datos disponibles</span>'; return; }
+                const tb = analyticsTable.querySelector("tbody"); tb.innerHTML = "";
+                const cell = (v) => (v === null || v === undefined) ? "—" : v;
+                rows.forEach((r) => {
+                    tb.insertAdjacentHTML("beforeend",
+                        `<tr><td>${cell(r.impressions)}</td><td>${cell(r.clicks)}</td><td>${cell(r.likes)}</td><td>${cell(r.comments)}</td><td>${cell(r.shares)}</td><td>${cell(r.engagement)}</td></tr>`);
+                });
+                analyticsState.innerHTML = '<span class="pill ok">Disponible</span>';
+                analyticsTable.style.display = "table";
+            } catch (e) {
+                const c = codeOf(e);
+                const label = c === "PERMISSION_REQUIRED" ? "Sin permisos"
+                    : c === "UNSUPPORTED_ANALYTICS" ? "No soportado por la API"
+                    : "Error";
+                analyticsState.innerHTML = `<span class="pill err">${label}</span> <span class="hint">${msgOf(e)}</span>`;
+            }
+        });
+
+        // ---- Ideas IA ----
+        const ideasList = document.getElementById("ideas-list");
+        const ideasSource = document.getElementById("ideas-source");
+        document.getElementById("btn-ideas").addEventListener("click", async () => {
+            ideasList.innerHTML = '<span class="spinner"></span> Generando…';
+            try {
+                const res = await call("linkedinGenerateContentIdeas")({ count: 5 });
+                ideasSource.textContent = res.data.source === "openai" ? "Generadas con IA (OpenAI)" : "Generadas localmente";
+                ideasList.innerHTML = "";
+                (res.data.ideas || []).forEach((idea) => {
+                    const div = document.createElement("div");
+                    div.className = "idea";
+                    div.innerHTML = `
+                        <h3>${escapeHtml(idea.titulo || "")}</h3>
+                        <div class="tags">🎯 ${escapeHtml(idea.audiencia || "")} · ${escapeHtml(idea.objetivo || "")}</div>
+                        <p class="hint">${escapeHtml(idea.angulo || "")}</p>
+                        <div class="draft">${escapeHtml(idea.borradorPost || "")}</div>
+                        <p class="hint" style="margin-top:.4rem;">CTA: ${escapeHtml(idea.cta || "")}</p>
+                        <button class="btn btn-primary" style="margin-top:.6rem;">Usar como borrador</button>`;
+                    div.querySelector("button").addEventListener("click", () => {
+                        postText.value = idea.borradorPost || "";
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                        postText.focus();
+                    });
+                    ideasList.appendChild(div);
+                });
+            } catch (e) { ideasList.innerHTML = `<span class="pill err">${msgOf(e)}</span>`; }
+        });
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, (c) =>
+                ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+        }
+
+        // ---- Procesar retorno del callback OAuth ----
+        function handleReturn() {
+            const p = new URLSearchParams(window.location.search);
+            const li = p.get("linkedin");
+            if (!li) return;
+            if (li === "connected") { showMsg(connMsg, "✅ LinkedIn conectado correctamente.", true); }
+            else if (li === "error") { showMsg(connMsg, ERR_MSG[p.get("code")] || ERR_MSG.UNKNOWN_ERROR, false); }
+            // Limpia la URL
+            window.history.replaceState({}, "", "linkedin.html");
+        }
+
+        function init() {
+            handleReturn();
+            refreshProfile();
+        }
+    </script>
+</body>
+</html>

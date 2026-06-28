@@ -2,6 +2,14 @@
 # Vive en tu computador pero NUNCA se publica en internet.
 _privado/
 
+# Backend: dependencias y secretos (NUNCA publicar)
+functions/node_modules/
+functions/.env
+functions/.env.*
+!functions/.env.example
+.firebase/
+firebase-debug.log
+
 # Basura del sistema / temporales
 .DS_Store
 .Rhistory

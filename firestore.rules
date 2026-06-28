@@ -1,0 +1,62 @@
+rules_version = '2';
+
+// ============================================================================
+//  Reglas de seguridad Firestore - Módulo LinkedIn
+//
+//  Principio: el navegador NUNCA accede a tokens. Toda operación con LinkedIn
+//  pasa por Cloud Functions (Admin SDK), que ignoran estas reglas.
+//  Estas reglas protegen el acceso DIRECTO desde el cliente.
+//
+//  - Cada usuario solo puede leer/escribir lo suyo (request.auth.uid == uid).
+//  - El documento de conexión/token queda DENEGADO para todo cliente.
+//  - Los estados OAuth (CSRF) quedan DENEGADOS para todo cliente.
+// ============================================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Estados OAuth temporales: solo backend (Admin SDK). Cliente denegado.
+    match /oauthStates/{state} {
+      allow read, write: if false;
+    }
+
+    match /users/{uid} {
+
+      // El doc raíz del usuario: lectura propia, sin escritura libre.
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+
+      // Conexión + token de LinkedIn: DENEGADO al cliente (contiene secretos).
+      // Solo las Cloud Functions con Admin SDK pueden leerlo/escribirlo.
+      match /linkedin/{docId} {
+        allow read, write: if false;
+      }
+
+      // Datos no sensibles del usuario: solo el dueño puede leerlos.
+      // La ESCRITURA la hacen las Cloud Functions (Admin SDK); el cliente solo lee.
+      match /linkedinOrganizations/{orgId} {
+        allow read: if request.auth != null && request.auth.uid == uid;
+        allow write: if false;
+      }
+
+      match /linkedinDrafts/{draftId} {
+        allow read: if request.auth != null && request.auth.uid == uid;
+        allow write: if false;
+      }
+
+      match /linkedinScheduledPosts/{postId} {
+        allow read: if request.auth != null && request.auth.uid == uid;
+        allow write: if false;
+      }
+
+      match /linkedinAnalytics/{snapshotId} {
+        allow read: if request.auth != null && request.auth.uid == uid;
+        allow write: if false;
+      }
+    }
+
+    // Todo lo demás: denegado por defecto.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -41,7 +41,8 @@ setGlobalOptions({ region: "us-central1", maxInstances: 10 });
 // --- Secretos (configurar con `firebase functions:secrets:set ...`) ---
 const LINKEDIN_CLIENT_SECRET = defineSecret("LINKEDIN_CLIENT_SECRET");
 const TOKEN_ENCRYPTION_KEY = defineSecret("TOKEN_ENCRYPTION_KEY");
-const OPENAI_API_KEY = defineSecret("OPENAI_API_KEY");
+// OPENAI_API_KEY es OPCIONAL: si no está, las ideas se generan localmente.
+// Para activarlo, configúralo en functions/.env o como secret y se leerá por process.env.
 
 // ---------------------------------------------------------------------------
 //  Helpers de datos
@@ -404,7 +405,6 @@ exports.linkedinGetAnalytics = onCall(
 //  10) linkedinGenerateContentIdeas
 // ===========================================================================
 exports.linkedinGenerateContentIdeas = onCall(
-  { secrets: [OPENAI_API_KEY] },
   async (request) => {
     requireAuth(request);
     const count = Math.min(Math.max(Number(request.data && request.data.count) || 5, 1), 8);

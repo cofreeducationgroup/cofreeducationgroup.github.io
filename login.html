@@ -115,6 +115,51 @@
             box-shadow: none;
         }
 
+        .divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            color: var(--text-light);
+            font-size: 0.85rem;
+            margin: 1.25rem 0;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .divider span { padding: 0 0.75rem; }
+
+        .google-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            background: #ffffff;
+            color: #3c4043;
+            border: 1px solid #dadce0;
+            border-radius: 6px;
+            padding: 0.8rem;
+            font-weight: 600;
+            font-size: 0.95rem;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .google-btn:hover {
+            background: #f7f8f8;
+            box-shadow: 0 1px 3px rgba(60, 64, 67, 0.15);
+        }
+
+        .google-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .google-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+
         .message {
             margin-top: 1.25rem;
             padding: 0.8rem;
@@ -189,6 +234,18 @@
             <button type="submit" class="submit-btn" id="submit-btn">Ingresar</button>
         </form>
 
+        <div class="divider"><span>o</span></div>
+
+        <button type="button" class="google-btn" id="google-btn">
+            <svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"/>
+                <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z"/>
+                <path fill="#FBBC05" d="M3.97 10.72a5.4 5.4 0 0 1 0-3.44V4.95H.96a9 9 0 0 0 0 8.1l3.01-2.33z"/>
+                <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/>
+            </svg>
+            Continuar con Google
+        </button>
+
         <div class="message" id="message"></div>
 
         <div class="extra-links">
@@ -207,7 +264,9 @@
             sendPasswordResetEmail,
             onAuthStateChanged,
             setPersistence,
-            browserLocalPersistence
+            browserLocalPersistence,
+            GoogleAuthProvider,
+            signInWithPopup
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
         // =================================================================
@@ -290,6 +349,45 @@
                 showMessage('Te enviamos un correo para restablecer tu contraseña.', 'success');
             } catch (error) {
                 showMessage('No se pudo enviar el correo de restablecimiento.', 'error');
+            }
+        });
+
+        // --- Iniciar sesión con Google ---
+        const googleBtn = document.getElementById('google-btn');
+        const googleProvider = new GoogleAuthProvider();
+
+        googleBtn.addEventListener('click', async () => {
+            googleBtn.disabled = true;
+            messageEl.className = 'message';
+            try {
+                await signInWithPopup(auth, googleProvider);
+                showMessage('¡Acceso correcto! Redirigiendo...', 'success');
+                window.location.href = 'panel.html';
+            } catch (error) {
+                let msg = 'No se pudo iniciar sesión con Google.';
+                switch (error.code) {
+                    case 'auth/popup-closed-by-user':
+                    case 'auth/cancelled-popup-request':
+                        msg = 'Cerraste la ventana de Google antes de terminar.';
+                        break;
+                    case 'auth/popup-blocked':
+                        msg = 'El navegador bloqueó la ventana emergente. Habilítala e intenta de nuevo.';
+                        break;
+                    case 'auth/account-exists-with-different-credential':
+                        msg = 'Ya existe una cuenta con ese correo usando otro método de acceso.';
+                        break;
+                    case 'auth/operation-not-allowed':
+                        msg = 'El acceso con Google no está habilitado todavía. Actívalo en Firebase.';
+                        break;
+                    case 'auth/unauthorized-domain':
+                        msg = 'Este dominio no está autorizado en Firebase.';
+                        break;
+                    case 'auth/network-request-failed':
+                        msg = 'Error de conexión. Revisa tu internet.';
+                        break;
+                }
+                showMessage(msg, 'error');
+                googleBtn.disabled = false;
             }
         });
     </script>

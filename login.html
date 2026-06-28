@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ingresar | COFRÉ Education Group</title>
+    <meta name="description" content="Acceso privado al área interna de COFRÉ Education Group.">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary-dark: #1e3a5f;
+            --primary-blue: #2b7fbf;
+            --primary-light: #5cb3e8;
+            --accent-green: #4db8a8;
+            --text-dark: #2c3e50;
+            --text-light: #6c757d;
+            --bg-light: #f8f9fa;
+            --border-color: #e9ecef;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: var(--text-dark);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-blue) 50%, var(--accent-green) 100%);
+            padding: 2rem 1rem;
+        }
+
+        .login-card {
+            background: #ffffff;
+            border-radius: 14px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+            width: 100%;
+            max-width: 420px;
+            padding: 2.5rem 2rem;
+            animation: fadeInUp 0.6s ease;
+        }
+
+        .login-logo {
+            display: block;
+            height: 80px;
+            width: auto;
+            margin: 0 auto 1.5rem;
+        }
+
+        .login-card h1 {
+            text-align: center;
+            font-size: 1.5rem;
+            color: var(--primary-dark);
+            margin-bottom: 0.3rem;
+        }
+
+        .login-card .subtitle {
+            text-align: center;
+            color: var(--text-light);
+            font-size: 0.95rem;
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            margin-bottom: 0.4rem;
+            font-weight: 500;
+            font-size: 0.9rem;
+            color: var(--text-dark);
+        }
+
+        .form-group input {
+            padding: 0.8rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 1rem;
+            transition: box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(77, 184, 168, 0.25);
+        }
+
+        .submit-btn {
+            width: 100%;
+            background: linear-gradient(135deg, var(--primary-blue), var(--accent-green));
+            color: white;
+            padding: 0.9rem;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .message {
+            margin-top: 1.25rem;
+            padding: 0.8rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            text-align: center;
+            display: none;
+        }
+
+        .message.error {
+            display: block;
+            background: #fdecea;
+            color: #b71c1c;
+            border: 1px solid #f5c6cb;
+        }
+
+        .message.success {
+            display: block;
+            background: #e6f4ea;
+            color: #1b5e20;
+            border: 1px solid #c3e6cb;
+        }
+
+        .extra-links {
+            margin-top: 1.5rem;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .extra-links a {
+            color: var(--primary-blue);
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .extra-links a:hover {
+            text-decoration: underline;
+        }
+
+        .back-home {
+            display: block;
+            text-align: center;
+            margin-top: 1.5rem;
+            color: var(--text-light);
+            text-decoration: none;
+            font-size: 0.85rem;
+        }
+
+        .back-home:hover { color: var(--primary-blue); }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <img src="Logo.png" alt="COFRÉ Education Group" class="login-logo">
+        <h1>Acceso privado</h1>
+        <p class="subtitle">Ingresa con tus credenciales</p>
+
+        <form id="login-form" autocomplete="on">
+            <div class="form-group">
+                <label for="email">Correo electrónico</label>
+                <input type="email" id="email" name="email" required autocomplete="username" placeholder="tu@correo.cl">
+            </div>
+            <div class="form-group">
+                <label for="password">Contraseña</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="••••••••">
+            </div>
+            <button type="submit" class="submit-btn" id="submit-btn">Ingresar</button>
+        </form>
+
+        <div class="message" id="message"></div>
+
+        <div class="extra-links">
+            <a id="reset-link">¿Olvidaste tu contraseña?</a>
+        </div>
+
+        <a href="index.html" class="back-home">← Volver al sitio</a>
+    </div>
+
+    <!-- Firebase Authentication -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import {
+            getAuth,
+            signInWithEmailAndPassword,
+            sendPasswordResetEmail,
+            onAuthStateChanged,
+            setPersistence,
+            browserLocalPersistence
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+        // =================================================================
+        //  CONFIGURACIÓN DE FIREBASE
+        //  Reemplaza estos valores por los de TU proyecto Firebase.
+        //  (Estos datos son públicos a propósito; NO son secretos.)
+        //  Los obtienes en: Firebase Console > Configuración del proyecto >
+        //  Tus apps > SDK de Firebase > Configuración.
+        // =================================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyARY-i1JB3lh6Ux1tJdaIkBmLAXpngVom0",
+            authDomain: "cofre-education-group.firebaseapp.com",
+            projectId: "cofre-education-group",
+            storageBucket: "cofre-education-group.firebasestorage.app",
+            messagingSenderId: "352407565108",
+            appId: "1:352407565108:web:bb955c37dc5c3d0ead2b61",
+            measurementId: "G-PWNZEG8T24"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        const form = document.getElementById('login-form');
+        const submitBtn = document.getElementById('submit-btn');
+        const messageEl = document.getElementById('message');
+        const resetLink = document.getElementById('reset-link');
+
+        function showMessage(text, type) {
+            messageEl.textContent = text;
+            messageEl.className = 'message ' + type;
+        }
+
+        // Si ya hay sesión iniciada, redirigir directo al panel.
+        setPersistence(auth, browserLocalPersistence).then(() => {
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    window.location.href = 'panel.html';
+                }
+            });
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Ingresando...';
+            messageEl.className = 'message';
+
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                showMessage('¡Acceso correcto! Redirigiendo...', 'success');
+                window.location.href = 'panel.html';
+            } catch (error) {
+                let msg = 'No se pudo iniciar sesión. Revisa tus datos.';
+                switch (error.code) {
+                    case 'auth/invalid-email': msg = 'El correo no es válido.'; break;
+                    case 'auth/user-disabled': msg = 'Esta cuenta está deshabilitada.'; break;
+                    case 'auth/user-not-found':
+                    case 'auth/wrong-password':
+                    case 'auth/invalid-credential': msg = 'Correo o contraseña incorrectos.'; break;
+                    case 'auth/too-many-requests': msg = 'Demasiados intentos. Intenta más tarde.'; break;
+                    case 'auth/network-request-failed': msg = 'Error de conexión. Revisa tu internet.'; break;
+                }
+                showMessage(msg, 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Ingresar';
+            }
+        });
+
+        resetLink.addEventListener('click', async () => {
+            const email = document.getElementById('email').value.trim();
+            if (!email) {
+                showMessage('Escribe tu correo arriba y vuelve a tocar el enlace para enviarte el restablecimiento.', 'error');
+                return;
+            }
+            try {
+                await sendPasswordResetEmail(auth, email);
+                showMessage('Te enviamos un correo para restablecer tu contraseña.', 'success');
+            } catch (error) {
+                showMessage('No se pudo enviar el correo de restablecimiento.', 'error');
+            }
+        });
+    </script>
+</body>
+</html>

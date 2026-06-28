@@ -1,0 +1,8 @@
+# Carpeta privada: documentos internos, reportes y backups.
+# Vive en tu computador pero NUNCA se publica en internet.
+_privado/
+
+# Basura del sistema / temporales
+.DS_Store
+.Rhistory
+*.log

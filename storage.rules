@@ -1,0 +1,29 @@
+rules_version = '2';
+
+// ============================================================================
+//  Reglas de Firebase Storage - Biblioteca de contenido
+//
+//  - Cada usuario solo accede a SUS propios archivos (users/{uid}/library/...).
+//  - Solo se permiten PDFs de hasta 25 MB.
+//  - Nadie puede leer ni escribir archivos de otro usuario.
+// ============================================================================
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    match /users/{uid}/library/{fileName} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+
+      allow write: if request.auth != null
+                   && request.auth.uid == uid
+                   && request.resource.size < 25 * 1024 * 1024
+                   && request.resource.contentType == 'application/pdf';
+
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Todo lo demás: denegado.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

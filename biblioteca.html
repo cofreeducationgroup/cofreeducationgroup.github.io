@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biblioteca de contenido | COFRÉ Education Group</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary-dark: #1e3a5f;
+            --primary-blue: #2b7fbf;
+            --accent-green: #4db8a8;
+            --text-dark: #2c3e50;
+            --text-light: #6c757d;
+            --bg-light: #f8f9fa;
+            --border-color: #e9ecef;
+            --err: #b71c1c;
+            --ok: #1b5e20;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6; color: var(--text-dark); background: var(--bg-light); min-height: 100vh;
+        }
+        #app { display: none; }
+        .loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--bg-light); color: var(--text-light); }
+        header {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-blue) 100%);
+            color: white; padding: 1rem 2rem; box-shadow: 0 2px 10px rgba(0,0,0,.1);
+        }
+        .header-container { max-width: 1000px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+        .header-left { display: flex; align-items: center; gap: .8rem; }
+        .header-left img { height: 38px; background: white; padding: 3px; border-radius: 4px; }
+        .header-left span { font-weight: bold; letter-spacing: .5px; }
+        .header-right { display: flex; gap: .8rem; align-items: center; font-size: .9rem; }
+        .btn { border: none; border-radius: 6px; padding: .6rem 1.1rem; cursor: pointer; font-size: .92rem; font-weight: 600; transition: transform .15s ease, box-shadow .15s ease, background .2s ease; }
+        .btn:hover:not(:disabled) { transform: translateY(-1px); }
+        .btn:disabled { opacity: .55; cursor: not-allowed; }
+        .btn-primary { background: var(--primary-blue); color: white; }
+        .btn-green { background: var(--accent-green); color: white; }
+        .btn-ghost { background: rgba(255,255,255,.15); color: white; border: 1px solid rgba(255,255,255,.4); }
+        .btn-danger { background: #fff; color: var(--err); border: 1px solid #f5c6cb; }
+        a.back { color: white; text-decoration: none; font-size: .85rem; opacity: .85; }
+        a.back:hover { opacity: 1; }
+        main { max-width: 1000px; margin: 0 auto; padding: 2rem; display: grid; gap: 1.5rem; }
+        .card { background: white; border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 14px rgba(0,0,0,.04); }
+        .card h2 { font-size: 1.2rem; color: var(--primary-dark); margin-bottom: 1rem; display: flex; align-items: center; gap: .5rem; }
+        label { font-weight: 600; font-size: .88rem; display: block; margin-bottom: .35rem; }
+        input[type="text"], input[type="url"], textarea, input[type="file"] {
+            width: 100%; padding: .7rem; border: 1px solid var(--border-color); border-radius: 6px; font-family: inherit; font-size: .95rem;
+        }
+        textarea { min-height: 70px; resize: vertical; }
+        input:focus, textarea:focus { outline: none; border-color: var(--primary-blue); box-shadow: 0 0 0 3px rgba(77,184,168,.2); }
+        .field { margin-bottom: 1rem; }
+        .hint { font-size: .82rem; color: var(--text-light); margin-top: .3rem; }
+        .msg { padding: .7rem .9rem; border-radius: 6px; font-size: .9rem; margin-top: .8rem; display: none; }
+        .msg.show { display: block; }
+        .msg.ok { background: #e6f4ea; color: var(--ok); }
+        .msg.err { background: #fdecea; color: var(--err); }
+        .progress { height: 8px; background: var(--border-color); border-radius: 4px; overflow: hidden; margin-top: .8rem; display: none; }
+        .progress.show { display: block; }
+        .progress > div { height: 100%; width: 0%; background: linear-gradient(90deg, var(--primary-blue), var(--accent-green)); transition: width .2s ease; }
+        .item { display: flex; gap: 1rem; align-items: flex-start; border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; margin-bottom: .8rem; }
+        .item .pdf-ico { font-size: 1.8rem; }
+        .item .body { flex: 1; min-width: 0; }
+        .item h3 { font-size: 1.05rem; color: var(--primary-dark); margin-bottom: .2rem; word-break: break-word; }
+        .item p { font-size: .9rem; color: var(--text-light); margin-bottom: .3rem; word-break: break-word; }
+        .item .meta { font-size: .78rem; color: var(--text-light); }
+        .item .actions { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .5rem; }
+        .item a.dl { font-size: .85rem; color: var(--primary-blue); text-decoration: none; font-weight: 600; }
+        .item a.dl:hover { text-decoration: underline; }
+        .empty { text-align: center; color: var(--text-light); padding: 2rem; }
+        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(0,0,0,.15); border-top-color: var(--primary-blue); border-radius: 50%; animation: spin .8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">Verificando acceso…</div>
+
+    <div id="app">
+        <header>
+            <div class="header-container">
+                <div class="header-left">
+                    <img src="Logo.png" alt="COFRÉ Education Group">
+                    <span>Biblioteca de contenido</span>
+                </div>
+                <div class="header-right">
+                    <a class="back" href="panel.html">← Panel</a>
+                    <span id="user-info"></span>
+                    <button class="btn btn-ghost" id="logout-btn">Cerrar sesión</button>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <!-- SUBIR -->
+            <section class="card">
+                <h2>⬆️ Subir paper / documento</h2>
+                <form id="upload-form">
+                    <div class="field">
+                        <label for="titulo">Título</label>
+                        <input type="text" id="titulo" required placeholder="Ej: Paper sobre neurociencia del aprendizaje">
+                    </div>
+                    <div class="field">
+                        <label for="descripcion">Descripción / notas (opcional)</label>
+                        <textarea id="descripcion" placeholder="De qué trata, por qué lo guardaste, ideas para un post…"></textarea>
+                    </div>
+                    <div class="field">
+                        <label for="enlace">Enlace relacionado (opcional)</label>
+                        <input type="url" id="enlace" placeholder="https://… (fuente, publicación en LinkedIn, etc.)">
+                    </div>
+                    <div class="field">
+                        <label for="archivo">Archivo PDF</label>
+                        <input type="file" id="archivo" accept="application/pdf" required>
+                        <div class="hint">Solo PDF, hasta 25 MB.</div>
+                    </div>
+                    <button type="submit" class="btn btn-green" id="btn-upload">Subir a la biblioteca</button>
+                    <div class="progress" id="progress"><div id="progress-bar"></div></div>
+                    <div class="msg" id="upload-msg"></div>
+                </form>
+            </section>
+
+            <!-- LISTA -->
+            <section class="card">
+                <h2>📚 Mis documentos guardados</h2>
+                <div id="list"><div class="empty"><span class="spinner"></span> Cargando…</div></div>
+            </section>
+        </main>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence }
+            from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, addDoc, deleteDoc, doc, query, orderBy, onSnapshot, serverTimestamp }
+            from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject }
+            from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyARY-i1JB3lh6Ux1tJdaIkBmLAXpngVom0",
+            authDomain: "cofre-education-group.firebaseapp.com",
+            projectId: "cofre-education-group",
+            storageBucket: "cofre-education-group.firebasestorage.app",
+            messagingSenderId: "352407565108",
+            appId: "1:352407565108:web:bb955c37dc5c3d0ead2b61",
+            measurementId: "G-PWNZEG8T24"
+        };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+
+        const loadingEl = document.getElementById("loading");
+        const appEl = document.getElementById("app");
+        let uid = null;
+        let unsubscribe = null;
+
+        function showMsg(text, ok) {
+            const el = document.getElementById("upload-msg");
+            el.textContent = text;
+            el.className = "msg show " + (ok ? "ok" : "err");
+        }
+        function escapeHtml(s) {
+            return String(s || "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+        }
+        function fmtSize(bytes) {
+            if (!bytes) return "";
+            const mb = bytes / (1024 * 1024);
+            return mb >= 1 ? mb.toFixed(1) + " MB" : Math.round(bytes / 1024) + " KB";
+        }
+        function fmtDate(ts) {
+            try { return ts && ts.toDate ? ts.toDate().toLocaleDateString("es-CL") : ""; }
+            catch (_) { return ""; }
+        }
+
+        // ---- Guardián de sesión ----
+        setPersistence(auth, browserLocalPersistence).then(() => {
+            onAuthStateChanged(auth, (user) => {
+                if (!user) { window.location.replace("login.html"); return; }
+                uid = user.uid;
+                document.getElementById("user-info").textContent = user.email;
+                loadingEl.style.display = "none";
+                appEl.style.display = "block";
+                listenLibrary();
+            });
+        });
+
+        document.getElementById("logout-btn").addEventListener("click", async () => {
+            if (unsubscribe) unsubscribe();
+            await signOut(auth); window.location.replace("login.html");
+        });
+
+        // ---- Lista en vivo ----
+        function listenLibrary() {
+            const q = query(collection(db, `users/${uid}/library`), orderBy("createdAt", "desc"));
+            unsubscribe = onSnapshot(q, (snap) => {
+                const listEl = document.getElementById("list");
+                if (snap.empty) {
+                    listEl.innerHTML = '<div class="empty">Aún no has guardado documentos. Sube tu primer PDF arriba.</div>';
+                    return;
+                }
+                listEl.innerHTML = "";
+                snap.forEach((d) => {
+                    const it = d.data();
+                    const div = document.createElement("div");
+                    div.className = "item";
+                    div.innerHTML = `
+                        <div class="pdf-ico">📄</div>
+                        <div class="body">
+                            <h3>${escapeHtml(it.titulo)}</h3>
+                            ${it.descripcion ? `<p>${escapeHtml(it.descripcion)}</p>` : ""}
+                            ${it.enlace ? `<p>🔗 <a class="dl" href="${escapeHtml(it.enlace)}" target="_blank" rel="noopener">${escapeHtml(it.enlace)}</a></p>` : ""}
+                            <div class="meta">${escapeHtml(it.fileName || "")} · ${fmtSize(it.size)} · ${fmtDate(it.createdAt)}</div>
+                            <div class="actions">
+                                <a class="dl" href="${escapeHtml(it.downloadURL)}" target="_blank" rel="noopener">⬇️ Descargar / ver PDF</a>
+                                <button class="btn btn-danger" data-id="${d.id}" data-path="${escapeHtml(it.storagePath || "")}">Eliminar</button>
+                            </div>
+                        </div>`;
+                    div.querySelector("button.btn-danger").addEventListener("click", () => removeItem(d.id, it.storagePath));
+                    listEl.appendChild(div);
+                });
+            }, (err) => {
+                document.getElementById("list").innerHTML = `<div class="empty" style="color:var(--err)">No se pudo cargar la biblioteca. ${escapeHtml(err.message || "")}</div>`;
+            });
+        }
+
+        // ---- Subir ----
+        const form = document.getElementById("upload-form");
+        const btnUpload = document.getElementById("btn-upload");
+        const progress = document.getElementById("progress");
+        const progressBar = document.getElementById("progress-bar");
+
+        form.addEventListener("submit", (e) => {
+            e.preventDefault();
+            const titulo = document.getElementById("titulo").value.trim();
+            const descripcion = document.getElementById("descripcion").value.trim();
+            const enlace = document.getElementById("enlace").value.trim();
+            const file = document.getElementById("archivo").files[0];
+
+            if (!titulo) { showMsg("Ponle un título.", false); return; }
+            if (!file) { showMsg("Selecciona un archivo PDF.", false); return; }
+            if (file.type !== "application/pdf") { showMsg("El archivo debe ser PDF.", false); return; }
+            if (file.size > 25 * 1024 * 1024) { showMsg("El PDF supera los 25 MB.", false); return; }
+
+            const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+            const storagePath = `users/${uid}/library/${Date.now()}_${safeName}`;
+            const storageRef = ref(storage, storagePath);
+            const task = uploadBytesResumable(storageRef, file, { contentType: "application/pdf" });
+
+            btnUpload.disabled = true;
+            progress.className = "progress show";
+            document.getElementById("upload-msg").className = "msg";
+
+            task.on("state_changed",
+                (snap) => {
+                    const pct = (snap.bytesTransferred / snap.totalBytes) * 100;
+                    progressBar.style.width = pct.toFixed(0) + "%";
+                },
+                (err) => {
+                    let m = "No se pudo subir el archivo.";
+                    if (err.code === "storage/unauthorized") m = "No tienes permiso (o falta activar Storage).";
+                    else if (err.code === "storage/canceled") m = "Subida cancelada.";
+                    showMsg(m + " " + (err.message || ""), false);
+                    btnUpload.disabled = false;
+                    progress.className = "progress";
+                },
+                async () => {
+                    try {
+                        const downloadURL = await getDownloadURL(task.snapshot.ref);
+                        await addDoc(collection(db, `users/${uid}/library`), {
+                            titulo, descripcion, enlace,
+                            fileName: file.name,
+                            storagePath,
+                            downloadURL,
+                            size: file.size,
+                            createdAt: serverTimestamp()
+                        });
+                        showMsg("✅ Documento guardado en tu biblioteca.", true);
+                        form.reset();
+                    } catch (e2) {
+                        showMsg("Se subió el archivo pero no se guardó el registro. " + (e2.message || ""), false);
+                    } finally {
+                        btnUpload.disabled = false;
+                        progress.className = "progress";
+                        progressBar.style.width = "0%";
+                    }
+                }
+            );
+        });
+
+        // ---- Eliminar ----
+        async function removeItem(id, storagePath) {
+            if (!confirm("¿Eliminar este documento? Esta acción no se puede deshacer.")) return;
+            try {
+                if (storagePath) {
+                    try { await deleteObject(ref(storage, storagePath)); } catch (_) { /* el archivo ya no existe */ }
+                }
+                await deleteDoc(doc(db, `users/${uid}/library/${id}`));
+            } catch (e) {
+                alert("No se pudo eliminar: " + (e.message || ""));
+            }
+        }
+    </script>
+</body>
+</html>

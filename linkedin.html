@@ -153,23 +153,6 @@
                 <div id="post-msg" class="msg"></div>
             </section>
 
-            <!-- ANALÍTICAS -->
-            <section class="card">
-                <h2>📊 Analíticas</h2>
-                <div class="hint">Las analíticas de páginas de empresa requieren permisos aprobados. Las del perfil personal no están disponibles vía API de LinkedIn.</div>
-                <div class="row" style="margin: 1rem 0;">
-                    <select id="analytics-org" style="max-width: 320px;"><option value="">Selecciona una página…</option></select>
-                    <button class="btn btn-primary" id="btn-analytics">Ver analíticas</button>
-                </div>
-                <div id="analytics-state"></div>
-                <div style="overflow-x:auto;">
-                    <table id="analytics-table" style="display:none;">
-                        <thead><tr><th>Impresiones</th><th>Clics</th><th>Reacciones</th><th>Comentarios</th><th>Compartidos</th><th>Interacción</th></tr></thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </section>
-
             <!-- IDEAS IA -->
             <section class="card">
                 <h2>💡 Ideas de contenido para COFRÉ Education Group</h2>
@@ -305,7 +288,6 @@
         const targetSel = document.getElementById("post-target");
         const orgWrap = document.getElementById("org-select-wrap");
         const orgSel = document.getElementById("post-org");
-        const analyticsOrg = document.getElementById("analytics-org");
         const orgHint = document.getElementById("org-hint");
 
         targetSel.addEventListener("change", () => {
@@ -317,10 +299,8 @@
                 const res = await call("linkedinGetOrganizations")();
                 const orgs = res.data.organizations || [];
                 orgSel.innerHTML = '<option value="">—</option>';
-                analyticsOrg.innerHTML = '<option value="">Selecciona una página…</option>';
                 orgs.forEach((o) => {
                     orgSel.insertAdjacentHTML("beforeend", `<option value="${o.id}">${o.name}</option>`);
-                    analyticsOrg.insertAdjacentHTML("beforeend", `<option value="${o.id}">${o.name}</option>`);
                 });
                 orgHint.textContent = orgs.length ? "" : "No se detectaron páginas administrables.";
             } catch (e) {
@@ -377,34 +357,6 @@
                 await call("linkedinSchedulePost")({ ...p, scheduledAt: new Date(when).toISOString() });
                 showMsg(postMsg, "🕒 Publicación programada.", true);
             } catch (e) { showMsg(postMsg, msgOf(e), false); }
-        });
-
-        // ---- Analíticas ----
-        const analyticsState = document.getElementById("analytics-state");
-        const analyticsTable = document.getElementById("analytics-table");
-        document.getElementById("btn-analytics").addEventListener("click", async () => {
-            analyticsTable.style.display = "none";
-            const orgId = analyticsOrg.value;
-            analyticsState.innerHTML = '<span class="spinner"></span> Cargando…';
-            try {
-                const res = await call("linkedinGetAnalytics")({ organizationId: orgId || null });
-                const rows = res.data.rows || [];
-                if (!rows.length) { analyticsState.innerHTML = '<span class="pill muted">Sin datos disponibles</span>'; return; }
-                const tb = analyticsTable.querySelector("tbody"); tb.innerHTML = "";
-                const cell = (v) => (v === null || v === undefined) ? "—" : v;
-                rows.forEach((r) => {
-                    tb.insertAdjacentHTML("beforeend",
-                        `<tr><td>${cell(r.impressions)}</td><td>${cell(r.clicks)}</td><td>${cell(r.likes)}</td><td>${cell(r.comments)}</td><td>${cell(r.shares)}</td><td>${cell(r.engagement)}</td></tr>`);
-                });
-                analyticsState.innerHTML = '<span class="pill ok">Disponible</span>';
-                analyticsTable.style.display = "table";
-            } catch (e) {
-                const c = codeOf(e);
-                const label = c === "PERMISSION_REQUIRED" ? "Sin permisos"
-                    : c === "UNSUPPORTED_ANALYTICS" ? "No soportado por la API"
-                    : "Error";
-                analyticsState.innerHTML = `<span class="pill err">${label}</span> <span class="hint">${msgOf(e)}</span>`;
-            }
         });
 
         // ---- Ideas IA ----

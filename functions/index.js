@@ -454,25 +454,76 @@ const NEWS_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
   "(KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 
-exports.getEducationNews = onCall(async (request) => {
-  requireAuth(request);
-  const topic = (request.data && request.data.topic) || "general";
-  const q = NEWS_QUERIES[topic] || NEWS_QUERIES.general;
+const NEWS_TTL_MS = 30 * 60 * 1000; // 30 minutos
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/** Descarga noticias de Google con reintentos ante 503/429. Devuelve items o null. */
+async function fetchGoogleNews(topicKey) {
+  const q = NEWS_QUERIES[topicKey] || NEWS_QUERIES.general;
   const url =
     `https://news.google.com/rss/search?q=${encodeURIComponent(q)}` +
     `&hl=es-419&gl=CL&ceid=CL:es`;
-
-  let xml;
-  try {
-    const res = await fetch(url, { headers: { "User-Agent": NEWS_UA } });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    xml = await res.text();
-  } catch (e) {
-    throw fail(ERR.UNKNOWN_ERROR, `news fetch: ${String(e && e.message)}`);
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      const res = await fetch(url, {
+        headers: {
+          "User-Agent": NEWS_UA,
+          Accept: "application/rss+xml, application/xml;q=0.9, */*;q=0.8",
+          "Accept-Language": "es-CL,es;q=0.9",
+        },
+      });
+      if (res.status === 503 || res.status === 429) { await sleep(600 * (attempt + 1)); continue; }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const xml = await res.text();
+      const items = parseRssItems(xml).slice(0, 12);
+      if (items.length) return items;
+    } catch (e) {
+      await sleep(400);
+    }
   }
+  return null;
+}
 
-  const items = parseRssItems(xml).slice(0, 12);
-  return { topic, items };
+/** Devuelve noticias del tema usando caché Firestore (30 min) con fallback a caché vieja. */
+async function getNewsCached(topicKey) {
+  const ref = db.doc(`newsCache/${topicKey}`);
+  const snap = await ref.get();
+  const cache = snap.exists ? snap.data() : null;
+  const fresh = cache && cache.fetchedAt && (Date.now() - cache.fetchedAt) < NEWS_TTL_MS &&
+    Array.isArray(cache.items) && cache.items.length;
+  if (fresh) return { items: cache.items, cached: true };
+
+  const fetched = await fetchGoogleNews(topicKey);
+  if (fetched) {
+    await ref.set({ items: fetched, fetchedAt: Date.now(), topic: topicKey, updatedAt: FieldValue.serverTimestamp() });
+    return { items: fetched, cached: false };
+  }
+  // Si Google falla pero hay caché previa (aunque vieja), la usamos.
+  if (cache && Array.isArray(cache.items) && cache.items.length) {
+    return { items: cache.items, cached: true, stale: true };
+  }
+  return null;
+}
+
+exports.getEducationNews = onCall(async (request) => {
+  requireAuth(request);
+  const topic = NEWS_QUERIES[request.data && request.data.topic] ? request.data.topic : "general";
+  const result = await getNewsCached(topic);
+  if (!result) throw fail(ERR.UNKNOWN_ERROR, "news: sin resultados ni caché");
+  return { topic, items: result.items, cached: !!result.cached, stale: !!result.stale };
+});
+
+// Refresca la caché de noticias cada 30 min (mantiene el feed "caliente" sin 503).
+exports.refreshEducationNews = onSchedule({ schedule: "every 30 minutes" }, async () => {
+  for (const topicKey of Object.keys(NEWS_QUERIES)) {
+    const items = await fetchGoogleNews(topicKey);
+    if (items) {
+      await db.doc(`newsCache/${topicKey}`).set({
+        items, fetchedAt: Date.now(), topic: topicKey, updatedAt: FieldValue.serverTimestamp(),
+      });
+    }
+    await sleep(1000); // espacia peticiones para no gatillar rate-limit
+  }
 });
 
 function parseRssItems(xml) {

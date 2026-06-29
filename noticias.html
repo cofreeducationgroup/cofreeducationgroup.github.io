@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Últimas Noticias Educativas | COFRÉ Education Group</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary-dark: #1e3a5f;
+            --primary-blue: #2b7fbf;
+            --accent-green: #4db8a8;
+            --text-dark: #2c3e50;
+            --text-light: #6c757d;
+            --bg-light: #f8f9fa;
+            --border-color: #e9ecef;
+            --err: #b71c1c;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: var(--text-dark); background: var(--bg-light); min-height: 100vh; }
+        #app { display: none; }
+        .loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--bg-light); color: var(--text-light); }
+        header { background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-blue) 100%); color: white; padding: 1rem 2rem; box-shadow: 0 2px 10px rgba(0,0,0,.1); }
+        .header-container { max-width: 1000px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+        .header-left { display: flex; align-items: center; gap: .8rem; }
+        .header-left img { height: 38px; background: white; padding: 3px; border-radius: 4px; }
+        .header-left span { font-weight: bold; letter-spacing: .5px; }
+        .header-right { display: flex; gap: .8rem; align-items: center; font-size: .9rem; }
+        .btn { border: none; border-radius: 6px; padding: .55rem 1rem; cursor: pointer; font-size: .9rem; font-weight: 600; transition: transform .15s ease, background .2s ease; background: var(--primary-blue); color: white; }
+        .btn:hover:not(:disabled) { transform: translateY(-1px); }
+        .btn:disabled { opacity: .55; cursor: not-allowed; }
+        .btn-ghost { background: rgba(255,255,255,.15); color: white; border: 1px solid rgba(255,255,255,.4); }
+        a.back { color: white; text-decoration: none; font-size: .85rem; opacity: .85; }
+        a.back:hover { opacity: 1; }
+        main { max-width: 1000px; margin: 0 auto; padding: 2rem; }
+        .card { background: white; border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 14px rgba(0,0,0,.04); }
+        .card h2 { font-size: 1.2rem; color: var(--primary-dark); margin-bottom: .3rem; display: flex; align-items: center; gap: .5rem; }
+        .sub { color: var(--text-light); font-size: .85rem; margin-bottom: 1rem; }
+        .tabs { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1.2rem; }
+        .tab { border: 1px solid var(--border-color); background: white; color: var(--text-dark); border-radius: 20px; padding: .4rem .9rem; cursor: pointer; font-size: .85rem; font-weight: 600; }
+        .tab.active { background: var(--primary-blue); color: white; border-color: var(--primary-blue); }
+        .news-item { padding: 1rem 0; border-bottom: 1px solid var(--border-color); }
+        .news-item:last-child { border-bottom: none; }
+        .news-item a { color: var(--primary-dark); text-decoration: none; font-weight: 600; font-size: 1.02rem; }
+        .news-item a:hover { color: var(--primary-blue); text-decoration: underline; }
+        .news-meta { font-size: .8rem; color: var(--text-light); margin-top: .25rem; }
+        .news-meta .src { color: var(--accent-green); font-weight: 600; }
+        .state { text-align: center; color: var(--text-light); padding: 2rem; }
+        .state.err { color: var(--err); }
+        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(0,0,0,.15); border-top-color: var(--primary-blue); border-radius: 50%; animation: spin .8s linear infinite; vertical-align: middle; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .toprow { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">Verificando acceso…</div>
+
+    <div id="app">
+        <header>
+            <div class="header-container">
+                <div class="header-left">
+                    <img src="Logo.png" alt="COFRÉ Education Group">
+                    <span>Últimas Noticias Educativas</span>
+                </div>
+                <div class="header-right">
+                    <a class="back" href="panel.html">← Panel</a>
+                    <span id="user-info"></span>
+                    <button class="btn btn-ghost" id="logout-btn">Cerrar sesión</button>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <section class="card">
+                <div class="toprow">
+                    <div>
+                        <h2>📰 Últimas Noticias Educativas</h2>
+                        <p class="sub">Titulares al día sobre educación en Chile (fuente: Google Noticias).</p>
+                    </div>
+                    <button class="btn" id="btn-refresh">↻ Actualizar</button>
+                </div>
+
+                <div class="tabs" id="tabs">
+                    <button class="tab active" data-topic="general">General</button>
+                    <button class="tab" data-topic="legislacion">Legislación</button>
+                    <button class="tab" data-topic="mineduc">MINEDUC</button>
+                    <button class="tab" data-topic="superior">Educación superior</button>
+                </div>
+
+                <div id="news"><div class="state"><span class="spinner"></span> Cargando noticias…</div></div>
+            </section>
+        </main>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence }
+            from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFunctions, httpsCallable }
+            from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyARY-i1JB3lh6Ux1tJdaIkBmLAXpngVom0",
+            authDomain: "cofre-education-group.firebaseapp.com",
+            projectId: "cofre-education-group",
+            storageBucket: "cofre-education-group.firebasestorage.app",
+            messagingSenderId: "352407565108",
+            appId: "1:352407565108:web:bb955c37dc5c3d0ead2b61",
+            measurementId: "G-PWNZEG8T24"
+        };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const functions = getFunctions(app, "us-central1");
+        const getNews = httpsCallable(functions, "getEducationNews");
+
+        const loadingEl = document.getElementById("loading");
+        const appEl = document.getElementById("app");
+        const newsEl = document.getElementById("news");
+        let currentTopic = "general";
+
+        function escapeHtml(s) {
+            return String(s || "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+        }
+        function fmtDate(s) {
+            try { const d = new Date(s); return isNaN(d) ? "" : d.toLocaleDateString("es-CL", { day: "2-digit", month: "short", year: "numeric" }); }
+            catch (_) { return ""; }
+        }
+
+        // ---- Guardián de sesión ----
+        setPersistence(auth, browserLocalPersistence).then(() => {
+            onAuthStateChanged(auth, (user) => {
+                if (!user) { window.location.replace("login.html"); return; }
+                document.getElementById("user-info").textContent = user.email;
+                loadingEl.style.display = "none";
+                appEl.style.display = "block";
+                load();
+            });
+        });
+        document.getElementById("logout-btn").addEventListener("click", async () => {
+            await signOut(auth); window.location.replace("login.html");
+        });
+
+        // ---- Tabs ----
+        document.getElementById("tabs").addEventListener("click", (e) => {
+            const btn = e.target.closest(".tab");
+            if (!btn) return;
+            document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+            btn.classList.add("active");
+            currentTopic = btn.dataset.topic;
+            load();
+        });
+        document.getElementById("btn-refresh").addEventListener("click", load);
+
+        // ---- Cargar noticias ----
+        async function load() {
+            newsEl.innerHTML = '<div class="state"><span class="spinner"></span> Cargando noticias…</div>';
+            try {
+                const res = await getNews({ topic: currentTopic });
+                const items = (res.data && res.data.items) || [];
+                if (!items.length) {
+                    newsEl.innerHTML = '<div class="state">No se encontraron noticias por ahora. Intenta más tarde.</div>';
+                    return;
+                }
+                newsEl.innerHTML = items.map((it) => `
+                    <div class="news-item">
+                        <a href="${escapeHtml(it.link)}" target="_blank" rel="noopener">${escapeHtml(it.title)}</a>
+                        <div class="news-meta">
+                            ${it.source ? `<span class="src">${escapeHtml(it.source)}</span> · ` : ""}${escapeHtml(fmtDate(it.pubDate))}
+                        </div>
+                    </div>`).join("");
+            } catch (e) {
+                newsEl.innerHTML = '<div class="state err">No se pudieron cargar las noticias. Inténtalo nuevamente.</div>';
+            }
+        }
+    </script>
+</body>
+</html>

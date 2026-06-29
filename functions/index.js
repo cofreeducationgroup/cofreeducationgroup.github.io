@@ -412,3 +412,74 @@ exports.linkedinGenerateContentIdeas = onCall(
     return { source, ideas };
   }
 );
+
+// ===========================================================================
+//  11) getEducationNews — últimas noticias educativas (Google Noticias RSS)
+//      Real, gratis, sin IA. Se lee en el backend para evitar CORS.
+//      data: { topic?: 'general'|'legislacion'|'mineduc'|'superior' }
+// ===========================================================================
+const NEWS_QUERIES = {
+  general: "educación Chile",
+  legislacion: "ley educación Chile OR reforma educacional Chile",
+  mineduc: "MINEDUC Chile",
+  superior: "educación superior Chile",
+};
+
+exports.getEducationNews = onCall(async (request) => {
+  requireAuth(request);
+  const topic = (request.data && request.data.topic) || "general";
+  const q = NEWS_QUERIES[topic] || NEWS_QUERIES.general;
+  const url =
+    `https://news.google.com/rss/search?q=${encodeURIComponent(q)}` +
+    `&hl=es-419&gl=CL&ceid=CL:es`;
+
+  let xml;
+  try {
+    const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (compatible; CofreNewsBot/1.0)" } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    xml = await res.text();
+  } catch (e) {
+    throw fail(ERR.UNKNOWN_ERROR, `news fetch: ${String(e && e.message)}`);
+  }
+
+  const items = parseRssItems(xml).slice(0, 15);
+  return { topic, items };
+});
+
+function parseRssItems(xml) {
+  const items = [];
+  const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+  let m;
+  while ((m = itemRegex.exec(xml)) !== null) {
+    const block = m[1];
+    const get = (tag) => {
+      const r = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`);
+      const mm = r.exec(block);
+      return mm ? mm[1] : "";
+    };
+    let title = decodeXmlText(get("title"));
+    const link = decodeXmlText(get("link"));
+    const pubDate = get("pubDate").trim();
+    let source = decodeXmlText(get("source"));
+    // Google News suele formatear el título como "Titular - Fuente"
+    if (!source && title.includes(" - ")) {
+      const parts = title.split(" - ");
+      source = parts.pop().trim();
+      title = parts.join(" - ").trim();
+    }
+    if (title && link) items.push({ title, link, source, pubDate });
+  }
+  return items;
+}
+
+function decodeXmlText(s) {
+  return String(s)
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&")
+    .trim();
+}

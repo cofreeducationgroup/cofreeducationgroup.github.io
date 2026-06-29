@@ -461,11 +461,12 @@ function parseRssItems(xml) {
     const link = decodeXmlText(get("link"));
     const pubDate = get("pubDate").trim();
     let source = decodeXmlText(get("source"));
-    // Google News suele formatear el título como "Titular - Fuente"
-    if (!source && title.includes(" - ")) {
-      const parts = title.split(" - ");
-      source = parts.pop().trim();
-      title = parts.join(" - ").trim();
+    // Google News agrega " - Fuente" al final del título: lo separamos y limpiamos.
+    if (title.includes(" - ")) {
+      const idx = title.lastIndexOf(" - ");
+      const tail = title.slice(idx + 3).trim();
+      if (!source) source = tail;
+      title = title.slice(0, idx).trim();
     }
     if (title && link) items.push({ title, link, source, pubDate });
   }

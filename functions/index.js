@@ -76,6 +76,23 @@ function buildAuthorUrn(target, memberId, organizationId, scopes) {
   return `urn:li:person:${memberId}`;
 }
 
+function normalizeOrganizationId(raw) {
+  const organizationId = String(raw || "").trim();
+  if (!/^[A-Za-z0-9_-]{1,80}$/.test(organizationId)) {
+    throw fail(ERR.INSUFFICIENT_DATA, "organizationId inválido");
+  }
+  return organizationId;
+}
+
+async function requireOwnedOrganization(uid, rawOrganizationId) {
+  const organizationId = normalizeOrganizationId(rawOrganizationId);
+  const snap = await db.doc(`users/${uid}/linkedinOrganizations/${organizationId}`).get();
+  if (!snap.exists || (snap.data() && snap.data().status !== "active")) {
+    throw fail(ERR.PERMISSION_REQUIRED, "Organización no verificada para este usuario");
+  }
+  return organizationId;
+}
+
 // ===========================================================================
 //  1) linkedinStartAuth  — inicia el flujo OAuth
 // ===========================================================================
@@ -255,12 +272,15 @@ exports.linkedinCreatePost = onCall(
     const action = data.action === "publish" ? "publish" : "draft";
 
     if (!text) throw fail(ERR.INSUFFICIENT_DATA, "El texto del post está vacío");
+    const organizationId = target === "organization" && data.organizationId
+      ? await requireOwnedOrganization(uid, data.organizationId)
+      : null;
 
     if (action === "draft") {
       const ref = await db.collection(`users/${uid}/linkedinDrafts`).add({
         text,
         target,
-        organizationId: data.organizationId || null,
+        organizationId,
         status: "active",
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
@@ -273,14 +293,14 @@ exports.linkedinCreatePost = onCall(
       throw fail(ERR.INSUFFICIENT_DATA, "Falta confirmación explícita para publicar");
     }
     const { accessToken, memberId, scopes } = await getActiveToken(uid);
-    const authorUrn = buildAuthorUrn(target, memberId, data.organizationId, scopes);
+    const authorUrn = buildAuthorUrn(target, memberId, organizationId, scopes);
 
     let postUrn;
     try {
       postUrn = await li.publishPost(accessToken, authorUrn, text);
     } catch (e) {
       await db.collection(`users/${uid}/linkedinDrafts`).add({
-        text, target, organizationId: data.organizationId || null,
+        text, target, organizationId,
         status: "failed",
         lastError: (e && e.details && e.details.code) || ERR.UNKNOWN_ERROR,
         createdAt: FieldValue.serverTimestamp(),
@@ -290,7 +310,7 @@ exports.linkedinCreatePost = onCall(
     }
 
     await db.collection(`users/${uid}/linkedinDrafts`).add({
-      text, target, organizationId: data.organizationId || null,
+      text, target, organizationId,
       status: "published",
       postUrn: postUrn || null,
       publishedAt: FieldValue.serverTimestamp(),
@@ -317,11 +337,14 @@ exports.linkedinSchedulePost = onCall(async (request) => {
   if (isNaN(when.getTime()) || when.getTime() <= Date.now()) {
     throw fail(ERR.INSUFFICIENT_DATA, "La fecha de programación debe ser futura y válida");
   }
+  const organizationId = target === "organization"
+    ? await requireOwnedOrganization(uid, data.organizationId)
+    : null;
 
   const ref = await db.collection(`users/${uid}/linkedinScheduledPosts`).add({
     text,
     target,
-    organizationId: data.organizationId || null,
+    organizationId,
     scheduledAt: Timestamp.fromDate(when),
     status: "scheduled",
     createdAt: FieldValue.serverTimestamp(),
@@ -414,35 +437,40 @@ exports.linkedinGenerateContentIdeas = onCall(
 );
 
 // ===========================================================================
-//  11) getEducationNews — últimas noticias educativas (Google Noticias RSS)
+//  11) getEducationNews — últimas noticias educativas
 //      Real, gratis, sin IA. Se lee en el backend para evitar CORS.
+//      Fuente: Bing Noticias RSS (Google Noticias bloquea IPs de servidor).
 //      data: { topic?: 'general'|'legislacion'|'mineduc'|'superior' }
 // ===========================================================================
 const NEWS_QUERIES = {
   general: "educación Chile",
-  legislacion: "ley educación Chile OR reforma educacional Chile",
+  legislacion: "ley educación Chile reforma educacional",
   mineduc: "MINEDUC Chile",
   superior: "educación superior Chile",
 };
+
+const NEWS_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+  "(KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 
 exports.getEducationNews = onCall(async (request) => {
   requireAuth(request);
   const topic = (request.data && request.data.topic) || "general";
   const q = NEWS_QUERIES[topic] || NEWS_QUERIES.general;
   const url =
-    `https://news.google.com/rss/search?q=${encodeURIComponent(q)}` +
-    `&hl=es-419&gl=CL&ceid=CL:es`;
+    `https://www.bing.com/news/search?q=${encodeURIComponent(q)}` +
+    `&format=rss&setlang=es&cc=CL`;
 
   let xml;
   try {
-    const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (compatible; CofreNewsBot/1.0)" } });
+    const res = await fetch(url, { headers: { "User-Agent": NEWS_UA } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     xml = await res.text();
   } catch (e) {
     throw fail(ERR.UNKNOWN_ERROR, `news fetch: ${String(e && e.message)}`);
   }
 
-  const items = parseRssItems(xml).slice(0, 15);
+  const items = parseRssItems(xml).slice(0, 12);
   return { topic, items };
 });
 
@@ -460,12 +488,11 @@ function parseRssItems(xml) {
     let title = decodeXmlText(get("title"));
     const link = decodeXmlText(get("link"));
     const pubDate = get("pubDate").trim();
-    let source = decodeXmlText(get("source"));
-    // Google News agrega " - Fuente" al final del título: lo separamos y limpiamos.
-    if (title.includes(" - ")) {
+    // Bing expone la fuente en <News:Source>; Google la pone como " - Fuente".
+    let source = decodeXmlText(get("News:Source")) || decodeXmlText(get("source"));
+    if (!source && title.includes(" - ")) {
       const idx = title.lastIndexOf(" - ");
-      const tail = title.slice(idx + 3).trim();
-      if (!source) source = tail;
+      source = title.slice(idx + 3).trim();
       title = title.slice(0, idx).trim();
     }
     if (title && link) items.push({ title, link, source, pubDate });
@@ -477,10 +504,16 @@ function decodeXmlText(s) {
   return String(s)
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
     .replace(/<[^>]+>/g, "")
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => safeCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, n) => safeCodePoint(parseInt(n, 10)))
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
     .replace(/&amp;/g, "&")
     .trim();
+}
+
+function safeCodePoint(n) {
+  try { return String.fromCodePoint(n); } catch (_) { return ""; }
 }

@@ -31,24 +31,33 @@
         .btn-ghost { background: rgba(255,255,255,.15); color: white; border: 1px solid rgba(255,255,255,.4); }
         a.back { color: white; text-decoration: none; font-size: .85rem; opacity: .85; }
         a.back:hover { opacity: 1; }
-        main { max-width: 1000px; margin: 0 auto; padding: 2rem; }
+        main { max-width: 1000px; margin: 0 auto; padding: 2rem; display: grid; gap: 1.5rem; }
         .card { background: white; border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 14px rgba(0,0,0,.04); }
-        .card h2 { font-size: 1.2rem; color: var(--primary-dark); margin-bottom: .3rem; display: flex; align-items: center; gap: .5rem; }
+        .card h2 { font-size: 1.15rem; color: var(--primary-dark); margin-bottom: .3rem; display: flex; align-items: center; gap: .5rem; }
         .sub { color: var(--text-light); font-size: .85rem; margin-bottom: 1rem; }
-        .tabs { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1.2rem; }
-        .tab { border: 1px solid var(--border-color); background: white; color: var(--text-dark); border-radius: 20px; padding: .4rem .9rem; cursor: pointer; font-size: .85rem; font-weight: 600; }
+        .tabs { display: flex; gap: .5rem; flex-wrap: wrap; }
+        .tab { border: 1px solid var(--border-color); background: white; color: var(--text-dark); border-radius: 20px; padding: .45rem .95rem; cursor: pointer; font-size: .85rem; font-weight: 600; }
         .tab.active { background: var(--primary-blue); color: white; border-color: var(--primary-blue); }
-        .news-item { padding: 1rem 0; border-bottom: 1px solid var(--border-color); }
+        /* Páginas oficiales */
+        .links-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .7rem; }
+        .link-chip { display: flex; align-items: center; gap: .6rem; border: 1px solid var(--border-color); border-radius: 8px; padding: .7rem .9rem; text-decoration: none; color: var(--text-dark); transition: border-color .2s ease, box-shadow .2s ease, transform .15s ease; }
+        .link-chip:hover { border-color: var(--primary-blue); box-shadow: 0 3px 10px rgba(0,0,0,.06); transform: translateY(-1px); }
+        .link-chip .ic { font-size: 1.1rem; }
+        .link-chip .tx { min-width: 0; }
+        .link-chip .nm { font-weight: 600; font-size: .9rem; color: var(--primary-dark); }
+        .link-chip .dm { font-size: .75rem; color: var(--text-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        /* Noticias */
+        .news-item { padding: .9rem 0; border-bottom: 1px solid var(--border-color); }
         .news-item:last-child { border-bottom: none; }
-        .news-item a { color: var(--primary-dark); text-decoration: none; font-weight: 600; font-size: 1.02rem; }
+        .news-item a { color: var(--primary-dark); text-decoration: none; font-weight: 600; font-size: 1rem; }
         .news-item a:hover { color: var(--primary-blue); text-decoration: underline; }
         .news-meta { font-size: .8rem; color: var(--text-light); margin-top: .25rem; }
         .news-meta .src { color: var(--accent-green); font-weight: 600; }
-        .state { text-align: center; color: var(--text-light); padding: 2rem; }
+        .state { text-align: center; color: var(--text-light); padding: 1.5rem; }
         .state.err { color: var(--err); }
         .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(0,0,0,.15); border-top-color: var(--primary-blue); border-radius: 50%; animation: spin .8s linear infinite; vertical-align: middle; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .toprow { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
+        .toprow { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
     </style>
 </head>
 <body>
@@ -70,22 +79,31 @@
         </header>
 
         <main>
+            <!-- TABS -->
             <section class="card">
-                <div class="toprow">
-                    <div>
-                        <h2>📰 Últimas Noticias Educativas</h2>
-                        <p class="sub">Titulares al día sobre educación en Chile (fuente: Google Noticias).</p>
-                    </div>
-                    <button class="btn" id="btn-refresh">↻ Actualizar</button>
-                </div>
-
+                <h2>📰 Últimas Noticias Educativas</h2>
+                <p class="sub">Elige un área para ver sus páginas oficiales y los titulares al día.</p>
                 <div class="tabs" id="tabs">
                     <button class="tab active" data-topic="general">General</button>
                     <button class="tab" data-topic="legislacion">Legislación</button>
                     <button class="tab" data-topic="mineduc">MINEDUC</button>
                     <button class="tab" data-topic="superior">Educación superior</button>
                 </div>
+            </section>
 
+            <!-- PÁGINAS OFICIALES -->
+            <section class="card">
+                <h2>🔗 Páginas oficiales <span id="links-topic" style="font-weight:400;color:var(--text-light);font-size:.9rem;"></span></h2>
+                <p class="sub">Sitios oficiales y fuentes de referencia del área.</p>
+                <div class="links-grid" id="official-links"></div>
+            </section>
+
+            <!-- ÚLTIMAS NOTICIAS -->
+            <section class="card">
+                <div class="toprow">
+                    <h2 style="margin:0;">🗞️ Noticias recientes</h2>
+                    <button class="btn" id="btn-refresh">↻ Actualizar</button>
+                </div>
                 <div id="news"><div class="state"><span class="spinner"></span> Cargando noticias…</div></div>
             </section>
         </main>
@@ -112,14 +130,53 @@
         const functions = getFunctions(app, "us-central1");
         const getNews = httpsCallable(functions, "getEducationNews");
 
+        // Páginas oficiales por tema (fuentes reales del sistema educativo chileno)
+        const TOPIC_META = {
+            general: { label: "General", links: [
+                { nm: "Ministerio de Educación", url: "https://www.mineduc.cl", ic: "🏛️" },
+                { nm: "Ayuda Mineduc", url: "https://www.ayudamineduc.cl", ic: "❓" },
+                { nm: "Superintendencia de Educación", url: "https://www.supereduc.cl", ic: "⚖️" },
+                { nm: "Agencia de Calidad de la Educación", url: "https://www.agenciaeducacion.cl", ic: "📊" },
+                { nm: "Consejo Nacional de Educación", url: "https://www.cned.cl", ic: "🏫" },
+                { nm: "Comunidad Escolar", url: "https://www.comunidadescolar.cl", ic: "👥" },
+            ]},
+            legislacion: { label: "Legislación", links: [
+                { nm: "Ley Chile (BCN)", url: "https://www.bcn.cl/leychile", ic: "📜" },
+                { nm: "Biblioteca del Congreso Nacional", url: "https://www.bcn.cl", ic: "📚" },
+                { nm: "Cámara de Diputadas y Diputados", url: "https://www.camara.cl", ic: "🏛️" },
+                { nm: "Senado de Chile", url: "https://www.senado.cl", ic: "🏛️" },
+                { nm: "Normativa Superintendencia Educación", url: "https://www.supereduc.cl/category/normativa/", ic: "⚖️" },
+                { nm: "Diario Oficial", url: "https://www.diariooficial.interior.gob.cl", ic: "📰" },
+            ]},
+            mineduc: { label: "MINEDUC", links: [
+                { nm: "Ministerio de Educación", url: "https://www.mineduc.cl", ic: "🏛️" },
+                { nm: "Ayuda Mineduc", url: "https://www.ayudamineduc.cl", ic: "❓" },
+                { nm: "Comunidad Escolar", url: "https://www.comunidadescolar.cl", ic: "👥" },
+                { nm: "Datos Abiertos Mineduc", url: "https://datosabiertos.mineduc.cl", ic: "📂" },
+                { nm: "Becas y Beneficios", url: "https://www.beneficiosestudiantiles.cl", ic: "🎓" },
+                { nm: "Educación Parvularia", url: "https://parvularia.mineduc.cl", ic: "🧸" },
+            ]},
+            superior: { label: "Educación superior", links: [
+                { nm: "Subsecretaría de Educación Superior", url: "https://educacionsuperior.mineduc.cl", ic: "🏛️" },
+                { nm: "Mi Futuro", url: "https://www.mifuturo.cl", ic: "🧭" },
+                { nm: "Consejo Nacional de Educación", url: "https://www.cned.cl", ic: "🏫" },
+                { nm: "Consejo de Rectores (CRUCH)", url: "https://www.consejoderectores.cl", ic: "🎓" },
+                { nm: "Financiamiento Estudiantil (Ingresa)", url: "https://portal.ingresa.cl", ic: "💳" },
+                { nm: "Gratuidad", url: "https://www.gratuidad.cl", ic: "✅" },
+            ]},
+        };
+
         const loadingEl = document.getElementById("loading");
         const appEl = document.getElementById("app");
         const newsEl = document.getElementById("news");
+        const linksEl = document.getElementById("official-links");
+        const linksTopicEl = document.getElementById("links-topic");
         let currentTopic = "general";
 
         function escapeHtml(s) {
             return String(s || "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
         }
+        function domainOf(url) { try { return new URL(url).hostname.replace(/^www\./, ""); } catch (_) { return ""; } }
         function fmtDate(s) {
             try { const d = new Date(s); return isNaN(d) ? "" : d.toLocaleDateString("es-CL", { day: "2-digit", month: "short", year: "numeric" }); }
             catch (_) { return ""; }
@@ -132,7 +189,7 @@
                 document.getElementById("user-info").textContent = user.email;
                 loadingEl.style.display = "none";
                 appEl.style.display = "block";
-                load();
+                selectTopic("general");
             });
         });
         document.getElementById("logout-btn").addEventListener("click", async () => {
@@ -145,19 +202,38 @@
             if (!btn) return;
             document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
             btn.classList.add("active");
-            currentTopic = btn.dataset.topic;
-            load();
+            selectTopic(btn.dataset.topic);
         });
-        document.getElementById("btn-refresh").addEventListener("click", load);
+        document.getElementById("btn-refresh").addEventListener("click", loadNews);
 
-        // ---- Cargar noticias ----
-        async function load() {
+        function selectTopic(topic) {
+            currentTopic = topic;
+            renderLinks(topic);   // instantáneo (estático)
+            loadNews();           // asíncrono (feed)
+        }
+
+        // ---- Páginas oficiales (siempre disponibles) ----
+        function renderLinks(topic) {
+            const meta = TOPIC_META[topic] || TOPIC_META.general;
+            linksTopicEl.textContent = "· " + meta.label;
+            linksEl.innerHTML = meta.links.map((l) => `
+                <a class="link-chip" href="${escapeHtml(l.url)}" target="_blank" rel="noopener">
+                    <span class="ic">${l.ic}</span>
+                    <span class="tx">
+                        <div class="nm">${escapeHtml(l.nm)}</div>
+                        <div class="dm">${escapeHtml(domainOf(l.url))}</div>
+                    </span>
+                </a>`).join("");
+        }
+
+        // ---- Últimas noticias (feed) ----
+        async function loadNews() {
             newsEl.innerHTML = '<div class="state"><span class="spinner"></span> Cargando noticias…</div>';
             try {
                 const res = await getNews({ topic: currentTopic });
                 const items = (res.data && res.data.items) || [];
                 if (!items.length) {
-                    newsEl.innerHTML = '<div class="state">No se encontraron noticias por ahora. Intenta más tarde.</div>';
+                    newsEl.innerHTML = '<div class="state">No hay noticias por ahora. Usa los enlaces oficiales de arriba.</div>';
                     return;
                 }
                 newsEl.innerHTML = items.map((it) => `
@@ -168,7 +244,7 @@
                         </div>
                     </div>`).join("");
             } catch (e) {
-                newsEl.innerHTML = '<div class="state err">No se pudieron cargar las noticias. Inténtalo nuevamente.</div>';
+                newsEl.innerHTML = '<div class="state err">No se pudieron cargar las noticias en este momento. Los enlaces oficiales de arriba siguen disponibles.</div>';
             }
         }
     </script>

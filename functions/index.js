@@ -439,12 +439,13 @@ exports.linkedinGenerateContentIdeas = onCall(
 // ===========================================================================
 //  11) getEducationNews — últimas noticias educativas
 //      Real, gratis, sin IA. Se lee en el backend para evitar CORS.
-//      Fuente: Bing Noticias RSS (Google Noticias bloquea IPs de servidor).
+//      Fuente: Google Noticias RSS (requiere User-Agent de navegador real;
+//      con UA de bot devuelve HTTP 503 desde IPs de servidor).
 //      data: { topic?: 'general'|'legislacion'|'mineduc'|'superior' }
 // ===========================================================================
 const NEWS_QUERIES = {
   general: "educación Chile",
-  legislacion: "ley educación Chile reforma educacional",
+  legislacion: "ley educación Chile OR reforma educacional Chile",
   mineduc: "MINEDUC Chile",
   superior: "educación superior Chile",
 };
@@ -458,8 +459,8 @@ exports.getEducationNews = onCall(async (request) => {
   const topic = (request.data && request.data.topic) || "general";
   const q = NEWS_QUERIES[topic] || NEWS_QUERIES.general;
   const url =
-    `https://www.bing.com/news/search?q=${encodeURIComponent(q)}` +
-    `&format=rss&setlang=es&cc=CL`;
+    `https://news.google.com/rss/search?q=${encodeURIComponent(q)}` +
+    `&hl=es-419&gl=CL&ceid=CL:es`;
 
   let xml;
   try {
@@ -488,11 +489,12 @@ function parseRssItems(xml) {
     let title = decodeXmlText(get("title"));
     const link = decodeXmlText(get("link"));
     const pubDate = get("pubDate").trim();
-    // Bing expone la fuente en <News:Source>; Google la pone como " - Fuente".
-    let source = decodeXmlText(get("News:Source")) || decodeXmlText(get("source"));
-    if (!source && title.includes(" - ")) {
+    // Google expone la fuente en <source> y además agrega " - Fuente" al título.
+    let source = decodeXmlText(get("source"));
+    if (title.includes(" - ")) {
       const idx = title.lastIndexOf(" - ");
-      source = title.slice(idx + 3).trim();
+      const tail = title.slice(idx + 3).trim();
+      if (!source) source = tail;
       title = title.slice(0, idx).trim();
     }
     if (title && link) items.push({ title, link, source, pubDate });

@@ -332,6 +332,9 @@
                     case 'auth/too-many-requests': msg = 'Demasiados intentos. Intenta más tarde.'; break;
                     case 'auth/network-request-failed': msg = 'Error de conexión. Revisa tu internet.'; break;
                 }
+                if (/autoriz/i.test(error.message || '')) {
+                    msg = 'Tu correo no está autorizado para acceder a esta área privada.';
+                }
                 showMessage(msg, 'error');
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Ingresar';
@@ -385,6 +388,9 @@
                     case 'auth/network-request-failed':
                         msg = 'Error de conexión. Revisa tu internet.';
                         break;
+                }
+                if (/autoriz/i.test(error.message || '')) {
+                    msg = 'Tu correo no está autorizado para acceder a esta área privada.';
                 }
                 showMessage(msg, 'error');
                 googleBtn.disabled = false;

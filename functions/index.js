@@ -18,6 +18,7 @@ const { setGlobalOptions } = require("firebase-functions/v2");
 const { onCall, onRequest } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { defineSecret } = require("firebase-functions/params");
+const { beforeUserSignedIn, HttpsError: IdentityError } = require("firebase-functions/v2/identity");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue, Timestamp } = require("firebase-admin/firestore");
 
@@ -570,3 +571,38 @@ function decodeXmlText(s) {
 function safeCodePoint(n) {
   try { return String.fromCodePoint(n); } catch (_) { return ""; }
 }
+
+// ===========================================================================
+//  Control de acceso: solo correos autorizados pueden iniciar sesión.
+//  Se ejecuta ANTES de crear la sesión (Google y email/contraseña).
+//  - SUPER_ADMINS: correos del dueño, SIEMPRE permitidos (evita auto-bloqueo).
+//  - Lista adicional editable en Firestore: config/allowlist -> { emails: [...] }
+// ===========================================================================
+const SUPER_ADMINS = [
+  "felipe@cofreeducationgroup.cl",
+  "cofregonzalezf@gmail.com",
+];
+
+exports.enforceAllowlist = beforeUserSignedIn(async (event) => {
+  const email = String((event.data && event.data.email) || "").toLowerCase().trim();
+  if (!email) {
+    throw new IdentityError("permission-denied", "Cuenta sin correo válido.");
+  }
+  if (SUPER_ADMINS.includes(email)) return; // dueño: siempre permitido
+
+  let allowed = [];
+  try {
+    const snap = await db.doc("config/allowlist").get();
+    if (snap.exists && Array.isArray(snap.data().emails)) {
+      allowed = snap.data().emails.map((e) => String(e).toLowerCase().trim());
+    }
+  } catch (_) { /* si falla la lectura, solo pasan los super admins */ }
+
+  if (!allowed.includes(email)) {
+    throw new IdentityError(
+      "permission-denied",
+      "Tu correo no está autorizado para acceder a esta área privada."
+    );
+  }
+});
+

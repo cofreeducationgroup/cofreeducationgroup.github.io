@@ -17,7 +17,7 @@ const MEMBER_SCOPES = ["openid", "profile", "email", "w_member_social"];
 const ORG_SCOPES = ["r_organization_admin", "w_organization_social", "rw_organization_admin"];
 
 function apiVersion() {
-  return process.env.LINKEDIN_API_VERSION || "202405";
+  return process.env.LINKEDIN_API_VERSION || "202606";
 }
 
 function restHeaders(accessToken) {

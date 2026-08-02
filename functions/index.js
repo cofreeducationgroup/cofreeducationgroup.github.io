@@ -33,6 +33,7 @@ const {
 } = require("./util");
 const li = require("./linkedin");
 const { generateContentIdeas } = require("./ai");
+const { identifyBookFromCover } = require("./books");
 
 initializeApp();
 const db = getFirestore();
@@ -436,6 +437,16 @@ exports.linkedinGenerateContentIdeas = onCall(
     return { source, ideas };
   }
 );
+
+// ===========================================================================
+//  Inventario de Oficina · identifyBookCover
+//  Identifica un libro a partir de una foto de su portada (IA de visión).
+// ===========================================================================
+exports.identifyBookCover = onCall(async (request) => {
+  requireAuth(request);
+  const imageBase64 = request.data && request.data.imageBase64;
+  return identifyBookFromCover(imageBase64);
+});
 
 // ===========================================================================
 //  11) getEducationNews — últimas noticias educativas
